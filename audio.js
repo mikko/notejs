@@ -121,10 +121,12 @@ var firstStep = 0;
 var nextStep = 0;
 var tempo = 120;
 var timeInterval = null;
+var mainLoop = null;
 
 var click = function() {
     var now = new Date().getTime();
     if( now >= nextStep ) {
+        console.log("Click");
         attached.forEach(function(cb) { cb(); });
         nextStep = now + timeInterval;
     }
@@ -133,14 +135,51 @@ var click = function() {
 var startSync = function() {
     firstStep = (new Date()).getTime();
     timeInterval = (1000 * 60) / tempo;
-    setInterval(click, timeInterval / 2);
+    mainLoop = setInterval(click, timeInterval / 2);
 };
+
+var stopSync = function() {
+    clearInterval(mainLoop);
+    mainLoop = null;
+}
 
 var attached = [];
 
 var attachToLoop = function(callback) {
     attached.push(callback);
 };
+
+var generateRhythm = function(strokes) {
+  return _.chain(_.range(4))
+    .map(
+      function() { 
+        return _.range(4)
+        .map(
+          function(v) {
+            var beats = [];
+            var timeLeft = 1;
+            while(timeLeft >= 0) {
+              //var partTime = 1 / parseInt((Math.random() * 4) % 4);
+              var partTime = 1 / 4;
+              timeLeft -= partTime;
+              beats.push({time: partTime, note: 1});
+            }
+            return beats;
+          }
+        )
+      }
+    )
+    .flatten()
+    .value();
+};
+
+var playNotes = function(notes) {
+  console.table(notes);
+};
+
+var pattern = function(range, pattern, fn) {
+  return _.chain().range(range).map(function(rangeIndex) { return _.map(pattern, function(patternValue) { return {time: patternValue, note: fn(patternValue, rangeIndex)}; }); }).flatten().value();
+}
 
 // Snare
 var snare = function() { 
@@ -170,7 +209,12 @@ var bell = function(f) {
   var e = new Envelope(ac, 0.01, 0.5, 0.4, 1.0);
   e.connect(s.amp.gain);
   s.node.start();
-  return function() { e.trigger(); };
+  return function(note) { 
+    if (note!==undefined) {
+      s.node.frequency.setValueAtTime(freq(note), ac.currentTime)
+    }
+    e.trigger(); 
+  };
 }
 
 
@@ -218,6 +262,8 @@ chord.start();
 }
 
 var melody = function() { setInterval(function() { playOsc(Math.random() * 200 + 200, 250, 0.4); }, 250) };
+
+var generatedMelody = pattern(8, [0.25,0.25,0.125,0.125,0.125,0.125,], function() { return majorScale[parseInt(Math.random() * majorScale.length)]; });
 
 var i = 0;
 var chord;
