@@ -1,4 +1,4 @@
-var ac = new webkitAudioContext();
+var ac = new AudioContext();
 
 var instrumentStorage = {};
 
@@ -173,8 +173,30 @@ var generateRhythm = function(strokes) {
     .value();
 };
 
+var strokes = [];
+
 var playNotes = function(notes) {
-  console.table(notes);
+  // Divide to strokes
+  // One stroke is always time worth of 1.0
+  var currentStroke = [];
+  _.reduce(notes, function(memo, note) {
+    memo -= note.time;
+    currentStroke.push(note);
+    if (memo <= 0) {
+      strokes.push(currentStroke);
+      currentStroke = [];
+      memo = 1;
+    }
+    return memo;
+  }, 1);
+
+  // Use bell as instrument in this proto
+  var b = bell(0);
+  var timeOffset = 0;
+  notes.forEach(function(s) {
+    b(s.note, timeOffset + s.time, s.time);
+    timeOffset += s.time;
+  });
 };
 
 var pattern = function(range, pattern, fn) {
@@ -209,14 +231,54 @@ var bell = function(f) {
   var e = new Envelope(ac, 0.01, 0.5, 0.4, 1.0);
   e.connect(s.amp.gain);
   s.node.start();
-  return function(note) { 
-    if (note!==undefined) {
-      s.node.frequency.setValueAtTime(freq(note), ac.currentTime)
+  var playFn =  function(note, time, length) { 
+    if (note !== undefined && time !== undefined) {
+      s.node.frequency.setValueAtTime(freq(note), ac.currentTime + time)
+      e.trigger(time, length); 
     }
-    e.trigger(); 
+    else {
+      e.trigger();
+    }
+    
+  };
+  return {
+    play: playFn,
+    node: s.amp
   };
 }
 
+var multi = function(baseFrequency, factor) {
+  var oscillators = [];
+  oscillators = _.range(factor).map(function(i) { 
+    var s = sine(freq(baseFrequency + (i * 12) ));
+    s.amp.gain.setValueAtTime(0, ac.currentTime);
+    var e = new Envelope(ac, 0.01, 0.5, 0.4, 1.0);
+    e.connect(s.amp.gain);
+    s.node.start();
+    
+    var amp = ac.createGain();
+    s.amp.disconnect();
+    s.amp.connect(amp);
+    amp.connect(ac.destination);
+    amp.gain.setValueAtTime(0.5/i, ac.currentTime);
+    
+    return [s,e];
+  });
+  return function(note, time, length) { 
+    if (note !== undefined && time !== undefined) {
+      _(oscillators).each(function(o) {
+        o[0].node.frequency.setValueAtTime(freq(note), ac.currentTime + time)
+        o[1].trigger(time, length); 
+      });
+    }
+    else {
+      _(oscillators).each(function(o) {
+        o[1].trigger();
+      });
+    }
+    
+  };
+}
 
 var majorScale = [0, 2, 4, 5, 7, 9, 11];
 
@@ -272,3 +334,6 @@ var drums = function() {
 };
 
 
+
+
+var giana = _([0,2,3,2]).map(function(v) { return [v, -5]; }).flatten().map(function(n) { return {time: 0.25, note: n}; }).value();

@@ -5,14 +5,20 @@ var Envelope = function(ac, attack, decay, sustain, release) {
   this.sustain = sustain;
   this.release = release;
 
-  this.trigger = function() {
-    console.log(this.context, this.attack, this.release, this.param);
-    now = this.context.currentTime;
-    this.param.cancelScheduledValues(now);
-    this.param.setValueAtTime(0, now);
-    this.param.linearRampToValueAtTime(1, now + this.attack);
-    this.param.linearRampToValueAtTime(sustain, now + this.attack + this.decay);
-    this.param.linearRampToValueAtTime(0, now + this.attack + this.decay + this.release);
+  this.trigger = function(timeOffset, noteLength) {
+    timeOffset = timeOffset || 0;
+    triggerTime = this.context.currentTime + timeOffset;
+    this.param.cancelScheduledValues(triggerTime);
+    this.param.setValueAtTime(0, triggerTime);
+    this.param.linearRampToValueAtTime(1, triggerTime + this.attack);
+    this.param.linearRampToValueAtTime(sustain, triggerTime + this.attack + this.decay);
+    if (noteLength === undefined) {
+      this.param.linearRampToValueAtTime(0, triggerTime + this.attack + this.decay + this.release);
+    } else {
+      // Ensure the note really ends after note length
+      this.param.cancelScheduledValues(triggerTime + noteLength);
+      this.param.linearRampToValueAtTime(0, triggerTime + noteLength);
+    }
   };
 
   this.connect = function(param) {
