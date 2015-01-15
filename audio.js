@@ -429,8 +429,14 @@ var testSequence = function(rounds) {
   var currentRoundStart = pointZero;
   var piano = new inst();
   piano.node.connect(ac.destination);
-  var myMelody = giana.map(function(n) { return { note: n.note + 12, time: n.time };});
-  var seqLength = myMelody.reduce(function(memo, s) { return memo + s.time; }, 0);
+  var myMelody = giana.map(
+    function(n) { 
+        return { note: n.note + 12, time: n.time };
+    });
+  var seqLength = myMelody.reduce(
+    function(memo, s) { 
+        return memo + s.time; 
+    }, 0);
   var round = 1;
   var playOneRound = function() {
     currentRoundStart = currentRoundStart + seqLength;

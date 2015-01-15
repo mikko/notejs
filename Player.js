@@ -56,23 +56,22 @@ var Player = function(ac) {
     var track = this.tracks[index];
     // TODO: lazy calc?
     track.sequenceLength = track.s.reduce(function(memo, s) { return memo + s.time;}, 0);
-    track.prevStart = ac.currentTime;
-    this.playNotes(track.i, track.s);
-    track.nextStart = track.prevStart + track.sequenceLength;
+    track.nextStart = 0;
     
+    var playSequence = function() {
+      track.nextStart = track.nextStart + track.sequenceLength;
+      this.playNotes(track.nextStart, track.i, track.s);
+      if (!track.kill) {
+        // TODO: check the seqLength and schedule accordingingly
+        this.scheduleAudioTime(playSequence, track.nextStart + (track.sequenceLength - 1));
+      }
+    }.bind(this);
+    this.scheduleAudioTime(playSequence, ac.currentTime + 1);
     
-    if (!track.kill) {
-      
-      // TODO: Forget timeouts and use scriptprocessor instead
-      console.log("Should schedule next iteration in", track.sequenceLength * 1000);
-      var nextEvenStroke = (t - t % p._strokeTime) + p._strokeTime;
-      
-      setTimeout(function() { console.log("Kukkuu"); }, track.sequenceLength * 1000);
-
-    }
   };
 
  this.playNotes = function(startTime, instrument, notes) {
+    console.log("Playing notes");
     // Divide to strokes
     var timeOffset = 0;
     notes.forEach(function(s) {
@@ -120,6 +119,9 @@ var Player = function(ac) {
       return false;
     }
     var index = this.tracks.push({ i: instrument, s: sequence});
+    // TODO: don't connect yet
+    // TODO: check if playing already and schedule the track
+    instrument.node.connect(ac.destination);
     console.log("Track added as track", index);
   };
 
