@@ -5,9 +5,7 @@ var Envelope = function(ac, attack, decay, sustain, release) {
   this.sustain = sustain;
   this.release = release;
 
-  this.trigger = function(timeOffset, noteLength) {
-    timeOffset = timeOffset || 0;
-    triggerTime = this.context.currentTime + timeOffset;
+  this.trigger = function(triggerTime, noteLength) {
     this.param.cancelScheduledValues(triggerTime);
     this.param.setValueAtTime(0, triggerTime);
     this.param.linearRampToValueAtTime(1, triggerTime + this.attack);

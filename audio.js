@@ -228,12 +228,12 @@ var hihat = function() {
 var bell = function(f) {
   var s = sine(freq(f));
   s.amp.gain.setValueAtTime(0, ac.currentTime);
-  var e = new Envelope(ac, 0.01, 0.5, 0.4, 1.0);
+  var e = new Envelope(ac, 0.001, 0.05, 0.2, 4.0);
   e.connect(s.amp.gain);
   s.node.start();
   var playFn =  function(note, time, length) { 
     if (note !== undefined && time !== undefined) {
-      s.node.frequency.setValueAtTime(freq(note), ac.currentTime + time)
+      s.node.frequency.setValueAtTime(freq(note), time)
       e.trigger(time, length); 
     }
     else {
@@ -246,6 +246,28 @@ var bell = function(f) {
     node: s.amp
   };
 }
+
+var mm = function() {
+  var s = sine(freq(0));
+  s.amp.gain.setValueAtTime(0, ac.currentTime);
+  var e = new Envelope(ac, 2, 4, 0.3, 8.0);
+  e.connect(s.amp.gain);
+  s.node.start();
+  var playFn =  function(note, time, length) { 
+    if (note !== undefined && time !== undefined) {
+      s.node.frequency.setValueAtTime(freq(note), time)
+      e.trigger(time, length); 
+    }
+    else {
+      e.trigger();
+    }
+    
+  };
+  return {
+    play: playFn,
+    node: s.amp
+  };
+};
 
 var multi = function(baseFrequency, factor) {
   var oscillators = [];
@@ -335,5 +357,91 @@ var drums = function() {
 
 
 
+// 0,2,3,2,0,5,3,2,0,2,3,5,7,5,3,2,0,2,3,2,0,5,3,2,-1,0,2,3,5,7,3,2
+var giana = _([0,2,3,2,0,5,3,2]).map(function(v) { return [v, -5]; }).flatten().map(function(n) { return {time: 0.25, note: n}; }).value();
 
-var giana = _([0,2,3,2]).map(function(v) { return [v, -5]; }).flatten().map(function(n) { return {time: 0.25, note: n}; }).value();
+
+var scamstrument = {
+  node: {
+    connect: function(dest) {
+      console.log("Scamstrument connected to node", dest);
+    }
+  },
+  play: function(note, time, length) {
+    setTimeout(function() { console.log("Scamstrument started playing note", note); }, time * 1000);
+    setTimeout(function() { console.log("Scamstrument stopped playing note", note); }, (time + length) * 1000);
+  }
+};
+
+
+
+
+
+/*****************************************************
+HERE IS THE GRAND HACK FOR LOOPING AUDIO
+*****************************************************/
+
+var inst = function() {
+  var s = sine(freq(0));
+  s.amp.gain.setValueAtTime(0, ac.currentTime);
+  var e = new Envelope(ac, 0.01, 0.125, 0.2, 4.0);
+  e.connect(s.amp.gain);
+  s.node.start();
+  var playFn =  function(note, time, length) { 
+    if (note !== undefined && time !== undefined) {
+      s.node.frequency.setValueAtTime(freq(note), time)
+      e.trigger(time, length); 
+    }
+    else {
+      e.trigger();
+    }
+    
+  };
+  return {
+    play: playFn,
+    node: s.amp
+  };
+};
+
+var mel = _.range(8).map(function(i) { return { note: i, time: 0.25}; });
+
+var playSequence = function(instrument, zeroTime, seq) {
+  var timeOffset = 0;
+  seq.forEach(function(s) {
+    instrument.play(s.note, zeroTime + timeOffset, s.time);
+    timeOffset += s.time;
+  });
+
+}
+
+var testSequence = function(rounds) {
+  var schedule = function(callback, audioTime) {
+    var interval = setInterval(function() {
+      if(audioTime < ac.currentTime) {
+        console.log("NOW");
+        callback();
+        clearInterval(interval);
+      }
+    }, 0);
+  }
+
+  var pointZero = ac.currentTime + 1;
+  var currentRoundStart = pointZero;
+  var piano = new inst();
+  piano.node.connect(ac.destination);
+  var myMelody = giana.map(function(n) { return { note: n.note + 12, time: n.time };});
+  var seqLength = myMelody.reduce(function(memo, s) { return memo + s.time; }, 0);
+  var round = 1;
+  var playOneRound = function() {
+    currentRoundStart = currentRoundStart + seqLength;
+    playSequence(piano, currentRoundStart, myMelody);
+    console.log("Round", round, "of", rounds);
+    if(round < rounds) {
+      schedule(playOneRound, currentRoundStart + (seqLength / 2));
+      ++round;
+    }
+  }
+  schedule(playOneRound, 0);
+  //playSequence(piano, ac.currentTime + 1, myMelody);
+}
+/*****************************************************/

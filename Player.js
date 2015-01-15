@@ -4,6 +4,7 @@ var Player = function(ac) {
   this.pointZero = 0; // Time in audio context pointing to the beginning of first stroke
   this.signature = [4,4]; // Time signature of the song
   this.metronome = true;
+  this._currentStroke = 0;
   // Tracks are objects like:
   // { i: someInstrument, s: someSequence, kill: isThisKilledAfterThisLoop }
   this.tracks = [];
@@ -12,6 +13,30 @@ var Player = function(ac) {
 
   this._initMetronome = function(signature) {
     return _.range(signature[0]).map(function(i) { return { time: (signature[0] * (1 / signature[1])) / signature[0], note: i == 0 ? 3 :0 }; });
+  };
+
+  // TODO: detach this timer to separate module
+  this._scheduled = [];
+  
+  this._scheduler = setInterval(function() {
+    var now = ac.currentTime;
+    this._scheduled.forEach(function(s) {
+      if(s.time < now) {
+        s.callback();
+        var index = this._scheduled.indexOf(s);
+        this._scheduled.splice(index, 1);
+      }
+    }.bind(this));
+  }.bind(this), 50);
+  
+  // This scheduler IS NOT ACCURATE ans is intended to be used in scheduling something roughly
+  this.scheduleAudioTime = function(cb, time) {
+    if (time < ac.currentTime) {
+      console.log("Please do not schedule in the past");
+      return 0;
+    }
+    this._scheduled.push({callback: cb, time: time});
+    return time - ac.currentTime;
   };
 
   this.setSignature = function(s) { 
@@ -29,19 +54,36 @@ var Player = function(ac) {
   this._scheduleTrack = function(index) {
     console.log("Scheduling track", index);
     var track = this.tracks[index];
+    // TODO: lazy calc?
+    track.sequenceLength = track.s.reduce(function(memo, s) { return memo + s.time;}, 0);
+    track.prevStart = ac.currentTime;
     this.playNotes(track.i, track.s);
+    track.nextStart = track.prevStart + track.sequenceLength;
+    
+    
+    if (!track.kill) {
+      
+      // TODO: Forget timeouts and use scriptprocessor instead
+      console.log("Should schedule next iteration in", track.sequenceLength * 1000);
+      var nextEvenStroke = (t - t % p._strokeTime) + p._strokeTime;
+      
+      setTimeout(function() { console.log("Kukkuu"); }, track.sequenceLength * 1000);
+
+    }
   };
 
- this.playNotes = function(instrument, notes) {
+ this.playNotes = function(startTime, instrument, notes) {
     // Divide to strokes
-    // One stroke is always time worth of 1.0
-    
     var timeOffset = 0;
     notes.forEach(function(s) {
-      instrument.play(s.note, timeOffset + s.time, s.time);
+      instrument.play(s.note, startTime + timeOffset + s.time, s.time);
       timeOffset += s.time;
     });
   };
+
+  this.playTime = function() {
+    return this.pointZero === 0 ? 0 : ac.currentTime - this.pointZero;
+  }
 
   this.start = function() {
     if (this._metronomeTrack === undefined) {
@@ -51,10 +93,17 @@ var Player = function(ac) {
     this.tracks.forEach(function(t, i) {
       this._scheduleTrack(i);
     }.bind(this));
+    this.beatCounter = setInterval(function() { 
+      var stroke = Math.floor(ac.currentTime / p._strokeTime);
+      if (this._currentstroke != stroke) {
+        //console.log("Stroke", stroke)
+        this._currentStroke = stroke;
+      }
+    }.bind(this), 500);
   };
 
   this.stop = function() {
-
+    clearInterval(this.beatCounter);
   };
 
   // schedule a track played with instrument
@@ -74,17 +123,40 @@ var Player = function(ac) {
     console.log("Track added as track", index);
   };
 
+  this.remove = function(index) {
+    if (this.tracks[index]) {
+      return this.tracks.pop(index);
+    }
+  };
+
   this._validateInstrument = function(i) {
-    return i !== undefined && i.play !== undefined && typeof i.play === "function" && i.node !== undefined;
+    var validInstrument =  
+      i !== undefined && 
+      i.play !== undefined && 
+      typeof i.play === "function" && 
+      i.node !== undefined &&
+      typeof i.node.connect === "function";
+    validInstrument ? "": console.log("Invalid instrument");
+    return validInstrument;
   };
 
   this._validateSequence = function(s) {
     if (Array.isArray(s) && s.length > 0) {
       return s.reduce(function(memo, val) { return memo && (val.time !== undefined && val.note !== undefined); }, true);
     }
+    console.log("Invalid sequence");
     return false;
   };
 
+  this._printSplash = function() {
+    var message = [
+      "*****",
+      "Welcome",
+      "*****",
+      "Usage: TODO"].join("\n");
+    console.log(message);
+  };
+  this._printSplash();
 }
 
 var p = new Player(ac);
