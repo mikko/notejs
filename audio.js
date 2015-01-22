@@ -358,8 +358,8 @@ var drums = function() {
 
 
 // 0,2,3,2,0,5,3,2,0,2,3,5,7,5,3,2,0,2,3,2,0,5,3,2,-1,0,2,3,5,7,3,2
-var giana = _([0,2,3,2,0,5,3,2]).map(function(v) { return [v, -5]; }).flatten().map(function(n) { return {time: 0.25, note: n}; }).value();
-
+var giana = _([ 0,2,3,2,0,5,3,2,0,2,3,5,7,5,3,2,0,2,3,2,0,5,3,2,-1,0,2,3,5,7,3,2]).map(function(v) { return [v, -5]; }).flatten().map(function(n) { return {time: 0.25, note: n}; }).value();
+var gianaBase = _([ 0,0,0,0,-2,-2,-2,-2,-4,-4,-4,-4,-5,-5,-1,-1,]).map(function(v) { return [v - 12, 0]; }).flatten().map(function(n) { return {time: 0.5, note: n}; }).value();
 
 var scamstrument = {
   node: {
@@ -369,7 +369,7 @@ var scamstrument = {
   },
   play: function(note, time, length) {
     setTimeout(function() { console.log("Scamstrument started playing note", note); }, time * 1000);
-    setTimeout(function() { console.log("Scamstrument stopped playing note", note); }, (time + length) * 1000);
+    //setTimeout(function() { console.log("Scamstrument stopped playing note", note); }, (time + length) * 1000);
   }
 };
 
@@ -427,8 +427,22 @@ var testSequence = function(rounds) {
 
   var pointZero = ac.currentTime + 1;
   var currentRoundStart = pointZero;
+  
+  /*
+  var compressor = ac.createDynamicsCompressor();
+  compressor.threshold.value = -50;
+  compressor.knee.value = 40;
+  compressor.ratio.value = 12;
+  compressor.reduction.value = -20;
+  compressor.attack.value = 0;
+  compressor.release.value = 0.25;
+  */
   var piano = new inst();
   piano.node.connect(ac.destination);
+  /*
+  piano.node.connect(compressor);
+  compressor.connect(ac.destination);
+  */
   var myMelody = giana.map(
     function(n) { 
         return { note: n.note + 12, time: n.time };
