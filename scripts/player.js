@@ -1,4 +1,4 @@
-require([
+define([
     "lodash",
     "audioContext"
 ],function(
