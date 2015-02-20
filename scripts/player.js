@@ -13,6 +13,7 @@ define([
       this.signature = [4,4]; // Time signature of the song
       this.metronome = true;
       this._currentStroke = 0;
+      
       // Tracks are objects like:
       // { i: someInstrument, s: someSequence, kill: isThisKilledAfterThisLoop }
       this.tracks = [];
@@ -22,6 +23,23 @@ define([
       this._initMetronome = function(signature) {
         return _.range(signature[0]).map(function(i) { return { time: (signature[0] * (1 / signature[1])) / signature[0], note: i == 0 ? 3 :0 }; });
       };
+
+      // Audio nodes
+
+      this.compressor = ac.createDynamicsCompressor();
+      this.compressor.name = "Player, Compressor";
+      this.compressor.threshold.value = -50;
+      this.compressor.knee.value = 40;
+      this.compressor.ratio.value = 12;
+      this.compressor.reduction.value = -20;
+      this.compressor.attack.value = 0;
+      this.compressor.release.value = 0.25;
+
+      this.merger = ac.createChannelMerger();
+      this.merger.name = "Player, Channel merger"
+      this.merger.connect(this.compressor);
+      this.compressor.connect(ac.destination);
+
 
       // TODO: detach this timer to separate module
       this._scheduled = [];
@@ -64,17 +82,17 @@ define([
         var track = this.tracks[index];
         // TODO: lazy calc?
         track.sequenceLength = track.s.reduce(function(memo, s) { return memo + s.time;}, 0);
-        track.nextStart = 0;
+        track.nextStart = ac.currentTime;
         
         var playSequence = function() {
-          track.nextStart = track.nextStart + track.sequenceLength;
           this.playNotes(track.nextStart, track.i, track.s);
+          track.nextStart = track.nextStart + track.sequenceLength;
           if (!track.kill) {
             // TODO: check the seqLength and schedule accordingingly
-            this.scheduleAudioTime(playSequence, track.nextStart + (track.sequenceLength - 1));
+            this.scheduleAudioTime(playSequence, track.nextStart + (track.sequenceLength / 2));
           }
         }.bind(this);
-        this.scheduleAudioTime(playSequence, ac.currentTime + 1);
+        this.scheduleAudioTime(playSequence, track.nextStart);
         
       };
 
@@ -90,7 +108,7 @@ define([
 
       this.playTime = function() {
         return this.pointZero === 0 ? 0 : ac.currentTime - this.pointZero;
-      }
+      };
 
       this.start = function() {
         if (this._metronomeTrack === undefined) {
@@ -129,7 +147,7 @@ define([
         var index = this.tracks.push({ i: instrument, s: sequence});
         // TODO: don't connect yet
         // TODO: check if playing already and schedule the track
-        instrument.node.connect(ac.destination);
+        instrument.node.connect(this.merger);
         console.log("Track added as track", index);
       };
 
@@ -151,6 +169,7 @@ define([
       };
 
       this._validateSequence = function(s) {
+        // TODO: optional array-form [time, note]
         if (Array.isArray(s) && s.length > 0) {
           return s.reduce(function(memo, val) { return memo && (val.time !== undefined && val.note !== undefined); }, true);
         }
