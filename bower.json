@@ -1,0 +1,21 @@
+{
+  "name": "LiveAudio",
+  "version": "0.0.1",
+  "authors": [
+    "Mikko Pohja <mjpohja@gmail.com>"
+  ],
+  "main": "scripts/main.js",
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "lodash": "~3.3.0",
+    "requirejs": "~2.1.16"
+  }
+}

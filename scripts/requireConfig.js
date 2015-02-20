@@ -1,7 +1,7 @@
 require.config({
 
     paths: {
-        lodash          : 'lib/lodash'
+        lodash          : '../bower_components/lodash/lodash'
     },
 /*
     shim: {
