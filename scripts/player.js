@@ -25,19 +25,30 @@ define([
         };
 
         // Audio nodes
-        this.compressor = ac.createDynamicsCompressor();
-        this.compressor.name = "Player, Compressor";
-        this.compressor.threshold.value = -50;
-        this.compressor.knee.value = 40;
-        this.compressor.ratio.value = 12;
-        this.compressor.reduction.value = -20;
-        this.compressor.attack.value = 0;
-        this.compressor.release.value = 0.25;
+        this.comp = ac.createDynamicsCompressor();
+        this.comp.name = "Player, Compressor";
+        this.comp.threshold.value = -50;
+        this.comp.knee.value = 40;
+        this.comp.ratio.value = 12;
+        this.comp.reduction.value = -20;
+        this.comp.attack.value = 0;
+        this.comp.release.value = 0.25;
+
+        this.compParams = function() {
+            return JSON.stringify({
+                threshold: this.comp.threshold.value,
+                knee: this.comp.knee.value,
+                ratio: this.comp.ratio.value,
+                reduction: this.comp.reduction.value,
+                attack: this.comp.attack.value,
+                release: this.comp.release.value
+            }, null, 2);
+        }
 
         this.merger = ac.createChannelMerger();
         this.merger.name = "Player, Channel merger"
-        this.merger.connect(this.compressor);
-        this.compressor.connect(ac.destination);
+        this.merger.connect(this.comp);
+        this.comp.connect(ac.destination);
 
 
         // TODO: detach this timer to separate module
