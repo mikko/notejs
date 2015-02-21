@@ -57,8 +57,7 @@ define([
         // This scheduler IS NOT ACCURATE ans is intended to be used in scheduling something roughly
         this.scheduleAudioTime = function(cb, time) {
             if (time < ac.currentTime) {
-                console.log("Please do not schedule in the past");
-                return 0;
+                console.log("Is it a good idea to schedule in the past");
             }
             this._scheduled.push({callback: cb, time: time});
             return time - ac.currentTime;
@@ -77,18 +76,16 @@ define([
         };
 
         this._scheduleTrack = function(index) {
-            console.log("Scheduling track", index);
             var track = this.tracks[index];
             // TODO: lazy calc?
             track.sequenceLength = track.s.reduce(function(memo, s) { return memo + s.time;}, 0);
             track.nextStart = ac.currentTime;
-
             var playSequence = function() {
                 this.playNotes(track.nextStart, track.i, track.s);
                 track.nextStart = track.nextStart + track.sequenceLength;
                 if (!track.kill) {
                     // TODO: check the seqLength and schedule accordingingly
-                    this.scheduleAudioTime(playSequence, track.nextStart + (track.sequenceLength / 2));
+                    this.scheduleAudioTime(playSequence, track.nextStart - (track.sequenceLength / 2));
                 }
             }.bind(this);
             this.scheduleAudioTime(playSequence, track.nextStart);
@@ -181,7 +178,7 @@ define([
             if (Array.isArray(s) && s.length > 0) {
                 var isValidObjectSequence = validateAsObjects(s);
                 if (isValidObjectSequence) {
-                    return true;
+                    return s;
                 }
                 else {
                     // Check if sequence is given as a shorthanded form: [[1,0], [1,1]]
