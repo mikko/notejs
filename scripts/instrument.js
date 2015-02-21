@@ -3,7 +3,7 @@ define([
 	"envelope",
 ], function(
     ac,
-	envelope
+	Envelope
 ) {
     // TODO: create an ultimate synthesizer object with chainable api
     // like inst.oscType("sawtooth").envelope(0.1,0.4,0.8,2).filter("lowpass", 500)
@@ -23,7 +23,7 @@ define([
         return Math.pow(Math.pow(2, 1/12), halfSteps) * 220;
     }
 
-    // Each instrument should include propertie
+    // Each instrument should include properties
     // AudioNode node: giving the output node not connected to anywhere
     // function(note, time, length) play: function for scheduling a note
     return { 
