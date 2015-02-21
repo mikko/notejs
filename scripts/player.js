@@ -95,8 +95,10 @@ define([
                 this.playNotes(track.nextStart, track.i, track.s);
                 track.nextStart = track.nextStart + track.sequenceLength;
                 if (!track.kill) {
-                    // TODO: check the seqLength and schedule accordingingly
-                    this.scheduleAudioTime(playSequence, track.nextStart - (track.sequenceLength / 2));
+                    // Schedule the next round to half of the length 
+                    // but not sooner than one second before end of previous round
+                    var scheduleAdvance = Math.min(track.sequenceLength / 2, 1);
+                    this.scheduleAudioTime(playSequence, track.nextStart - scheduleAdvance);
                 }
             }.bind(this);
             this.scheduleAudioTime(playSequence, track.nextStart);
